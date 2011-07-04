@@ -253,19 +253,24 @@ class Doctrine_Connection_Statement implements Doctrine_Adapter_Statement_Interf
                         }
                     }
                 }
-
                 $result = $this->_stmt->execute();
-
                 $this->_conn->incrementQueryCount();
             }
 
             $this->_conn->getListener()->postStmtExecute($event);
-
+            // FDORN, PGUTHY: 2011-07-04: Problem mit Data-Load - offene Cursor
+            // FDORN, PGUTHY: Manchmal rutschen hier Selects rein. (Query _type nicht richtig gesetzt?)
+            if (substr($this->_stmt->queryString,0, 6) != 'SELECT') {
+                $this->_stmt->closeCursor();
+            }
             return $result;
         } catch (PDOException $e) {
         } catch (Doctrine_Adapter_Exception $e) {
         }
 
+        if (substr($this->_stmt->queryString,0, 6) != 'SELECT') {
+            $this->_stmt->closeCursor();
+        }
         $this->_conn->rethrowException($e, $this);
 
         return false;
